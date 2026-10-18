@@ -7850,6 +7850,8 @@ must keep splitting are covered by `markdown-blocks.test.mjs`.
   fetched and refreshed; old responses cannot erase it. Each stream remains
   bounded to 256KiB and retains its final marker after exit. A Stop failure is
   visible without an unhandled rejection and the control remains retryable.
+  An ended task keeps its row only for a short grace window and can be closed
+  from the bar, so finished commands do not accumulate above the composer.
 - **Specs linked**: `03-runtime/03-tools-and-permissions.md` (§5),
   `03-runtime/06-host-rpc-protocol.md` (§4)
 - **Acceptance criterion**: C, E, F
@@ -7861,7 +7863,10 @@ must keep splitting are covered by `markdown-blocks.test.mjs`.
   exercises production React components in isolated Electron at 1280px, 700px,
   and 390px widths. Host tests cover exit-before-drain and shutdown under output
   lock contention. The full agent-to-Desktop journey and an 83-minute paced
-  100,000-line soak remain manual; the automated volume test is accelerated.)
+  100,000-line soak remain manual; the automated volume test is accelerated.
+  Renderer visibility (grace window, close action, pinned output preview) is
+  covered by `apps/desktop/test/background-tasks-bar-visibility.test.mjs` with a
+  controlled clock; the multi-second hand-off itself is not timed in Electron.)
 
 #### E2E-117: Agent/Plan/Goal UX and locales contain no Chat controls
 
@@ -10048,9 +10053,10 @@ must keep splitting are covered by `markdown-blocks.test.mjs`.
 - **Steps**: Start a multi-step Agent turn that calls `TodoWrite` with ordered
   pending and `in_progress` items. Observe the TodoDock above the Composer;
   confirm its progress text is left-aligned, its separate arrow button is at
-  the right edge, and clicking the text does not expand it. Click the upward
-  arrow to expand, then confirm the arrow points down. Switch sessions and
-  confirm the checklist stays session-scoped.
+  the right edge, measures at least 36px square, and contains an independently
+  sized 18px arrow icon. Confirm clicking the text does not expand it. Click
+  the upward arrow to expand, then confirm the arrow points down. Switch
+  sessions and confirm the checklist stays session-scoped.
   Expand a checklist longer than the dock's height cap: every row must render
   and the list must scroll inside the dock without growing the Composer stack.
   Complete and cancel items, confirm the all-cancelled label, then clear the
@@ -11150,10 +11156,12 @@ This test plan spec is accepted when:
 
 ### US-UI-73 Composer mode selector has stable width
 - Open the empty home and a docked thread in both English and zh-CN.
-- Switch the Composer mode chip through Agent/Plan/Goal several times.
-- Expect the mode chip to keep one fixed width sized for the longest built-in
-  label (English "Agent" / zh-CN "智能体"); the adjacent Thinking and
-  permission controls, send button, and composer shell do not move or resize.
+- Open the Composer mode chip and switch between Agent/Plan/Goal several times.
+- Expect the chip to list the three modes as checked menu items, to name only
+  the committed mode, and to keep one fixed width sized for the longest built-in
+  label (English "Agent" / zh-CN "智能体") plus its caret; the adjacent Thinking
+  and permission controls, send button, and composer shell do not move or
+  resize.
 - In Goal, expect the permission chip to remain visible with the same geometry,
   show Full auto / 全自动, and stay disabled without opening a permission menu.
   The Plan/Goal approval card remains the separate execution-policy control.
@@ -16014,7 +16022,9 @@ plugin-form fixtures in an isolated temporary directory at runtime.
   1. Open the work panel and request the user's preferred width.
   2. Drag the inner divider toward MainChat's left edge, including during
      pointer preview, then release.
-  3. Manually reopen the sidebar after the layout collapsed it.
+  3. Manually reopen the sidebar after the layout collapsed it. Repeat in an
+     866px viewport, where the reopen narrows the panel below 244px, then
+     collapse the sidebar again and drag the divider toward the panel.
   4. Close the work panel and confirm the sidebar returns; repeat after
      manually collapsing the sidebar.
   5. Repeat divider changes with `ArrowLeft`, `ArrowRight`, `Home`, and `End`.
@@ -16034,7 +16044,9 @@ plugin-form fixtures in an isolated temporary directory at runtime.
   budget is exhausted the expanded sidebar collapses immediately, and the panel
   may keep growing afterwards. A manual reopen spends panel width first;
   MainChat is preserved where possible and otherwise lands on the 460px reopen
-  target. Closing the panel restores only a sidebar the layout collapsed. The
+  target. That width is lent, not stored: the stored preferred width is
+  unchanged, collapsing the sidebar again restores it, and divider drags still
+  stop at 244px. Closing the panel restores only a sidebar the layout collapsed. The
   separator's ARIA minimum/maximum follow the same dynamic budget. The panel
   header's `+`, maximize, and viewport-fixed collapse toggle resolve to a single
   control gap (`--ds-work-panel-control-gap`) with no divider, inset, or margin
@@ -16197,12 +16209,15 @@ plugin-form fixtures in an isolated temporary directory at runtime.
 #### E2E-LAYOUT-sidebar-row-states
 
 - **Preconditions**: Host-seeded project, pinned and standalone conversations;
-  a current workspace; built desktop with isolated data and profile directories.
+  the sidebar Session time preference enabled; a current workspace; built
+  desktop with isolated data and profile directories.
 - **Steps**: In dark and light themes, select a project conversation, hover its
   project title and an unselected conversation, then hover the selected row.
   Check that a project session date is visible at rest and replaced by its
-  action on hover and focus. Exercise the window-blur handler, drop-target
-  styling, project action hover and keyboard Tab/Shift+Tab focus. Fold and
+  action in the same trailing slot on hover and focus; verify no divider appears
+  before the date, dates through seven calendar days are relative, and older
+  dates show month and day without a year. Exercise the window-blur handler,
+  drop-target styling, project action hover and keyboard Tab/Shift+Tab focus. Fold and
   reopen its group. Select pinned and
   standalone conversations. Open Settings and return. Enable reduced motion and
   inspect both row transition durations. In a separate twelve-session project,
@@ -16217,7 +16232,10 @@ plugin-form fixtures in an isolated temporary directory at runtime.
   wins over hover, and blur releases hover without clearing selection. Settings
   replaces sidebar navigation, and returning restores conversation and workspace
   context without a second selected row. Project session rows show dates at rest
-  and reveal actions in their place on hover and focus. Loading more sessions
+  in the same trailing slot used for session actions, with no divider. Hover and
+  focus replace the date with the action in that slot. Dates through seven
+  calendar days are relative and older dates show month and day without a year.
+  Loading more sessions
   reveals all twelve; folding and reopening restores the initial ten and the
   two-session remainder control. Rendered component tests additionally cover no
   selected session, a pending destination and non-chat page state.
@@ -18159,3 +18177,41 @@ host-created files. The full app's file-preview viewer is covered separately.
   the theme-token and reduced-motion guarantees; the interactive sidebar
   scenario remains a manual validation scenario run in a capable
   environment.
+
+### E2E-267: A plugin follows the selected session and opens its own view
+
+- **Preconditions**: A development plugin that declares one
+  `contributes.views` entry and holds `ui.view`, and whose command calls
+  `pi.session.getActive()`, subscribes to `pi.events.on("session:activated")`,
+  and then calls `pi.ui.revealView({ location: "src/App.tsx" })`. Two sessions
+  exist in different projects; one of them is running a turn.
+- **Steps**:
+  1. Select the idle session and run the plugin's command.
+  2. Switch to the other project's session and start a turn; re-check the
+     payload the plugin reported.
+  3. While that turn runs, run the plugin's command and inspect the work panel.
+  4. Switch to the first session, then run the plugin's command again from a
+     stale reference to the previous session id.
+  5. Disable the plugin and re-open the same work-panel tab.
+- **Expected**: `pi.session.getActive()` answers with the session on screen, its
+  project path, and `activeTurn: null` while it is idle. `session:activated`
+  arrives once per real change — a selection switch, a project change, and the
+  turn starting or finishing — and the running session reports the durable
+  `turnId` with its start time rather than an inferred one. `pi.ui.revealView`
+  opens the plugin's view as a work-panel tab of the active session and focuses
+  it, and the view receives `src/App.tsx` through `piViewOpen`/`view:open`
+  without being reloaded when it is already open. A call naming a session the
+  user left fails with `INVALID_ARGUMENT` and opens nothing. Revealing without
+  `ui.view` fails with `PERMISSION_DENIED`. With the plugin disabled the tab
+  reports the missing view instead of showing stale content.
+- **Specs linked**: `07-plugins/03-plugin-api.md` §ui, §session follow, §5
+  events, §6 panel bridge; ADR 0331.
+- **Acceptance**: A plugin can follow the selected session and show its own view
+  beside it without importing host internals, and a stale session can never be
+  revealed onto a panel the user is no longer looking at.
+- **Status**: Draft. Unit coverage in
+  `apps/desktop/test/plugin-session-follow.test.mjs` (snapshot assembly,
+  announcement deduplication, stale-turn and stale-session refusal,
+  `ui.view` gating, panel-bridge channel) and the wiring contract in
+  `apps/desktop/test/main-wiring-contract.test.mjs`; the interactive Electron
+  scenario remains a manual validation run.
