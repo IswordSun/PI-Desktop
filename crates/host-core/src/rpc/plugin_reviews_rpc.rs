@@ -85,7 +85,8 @@ async fn review_tickers(
 }
 
 /// One page of public reviews, with the summary and the trusted webpage URL.
-async fn reviews(state: &Arc<Mutex<AppState>>, params: Value) -> Result<Value, JsonRpcError> {    let query = parse_query(&params)?;
+async fn reviews(state: &Arc<Mutex<AppState>>, params: Value) -> Result<Value, JsonRpcError> {
+    let query = parse_query(&params)?;
     let origin = review_origin(state).await?;
     let page = tokio::task::spawn_blocking(move || fetch_reviews(&origin, &query))
         .await

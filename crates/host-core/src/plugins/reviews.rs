@@ -255,14 +255,12 @@ pub(crate) fn summaries_url(origin: &str, ids: &[String]) -> String {
 
 /// Tickers URL for one batch of ids on the trusted origin.
 pub(crate) fn tickers_url(origin: &str, ids: &[String]) -> String {
-    format!(
-        "{origin}/api/v1/review-tickers?pluginIds={}",
-        ids.join(",")
-    )
+    format!("{origin}/api/v1/review-tickers?pluginIds={}", ids.join(","))
 }
 
 /// Reviews URL for one query on the trusted origin.
-pub(crate) fn reviews_url(origin: &str, query: &PluginReviewQuery) -> String {    let mut url = format!(
+pub(crate) fn reviews_url(origin: &str, query: &PluginReviewQuery) -> String {
+    let mut url = format!(
         "{origin}/api/v1/plugins/{}/reviews?limit={}&sentiment={}&sort={}",
         encode_component(&query.plugin_id),
         query.limit,
@@ -345,7 +343,8 @@ pub(crate) fn fetch_review_tickers(
 }
 
 /// Read one page of public reviews plus its summary and webpage URL.
-pub(crate) fn fetch_reviews(origin: &str, query: &PluginReviewQuery) -> Result<PluginReviewPage> {    let url = reviews_url(origin, query);
+pub(crate) fn fetch_reviews(origin: &str, query: &PluginReviewQuery) -> Result<PluginReviewPage> {
+    let url = reviews_url(origin, query);
     let (status, payload) = get_json(&url)?;
     if status != 200 {
         return Err(center_refusal(&url, status, &payload));
@@ -516,13 +515,22 @@ fn validate_ticker(ticker: &PluginReviewTicker, expected_plugin_id: &str) -> Res
             bail!("PLUGIN_MARKET_INVALID: review ticker for {expected_plugin_id} carried a row without an id");
         }
         if !seen.insert(row.id.as_str()) {
-            bail!("PLUGIN_MARKET_INVALID: review ticker for {expected_plugin_id} repeated review {}", row.id);
+            bail!(
+                "PLUGIN_MARKET_INVALID: review ticker for {expected_plugin_id} repeated review {}",
+                row.id
+            );
         }
         if !(8..=10).contains(&row.rating_half_stars) {
-            bail!("PLUGIN_MARKET_INVALID: ticker review {} is below the four-star gate", row.id);
+            bail!(
+                "PLUGIN_MARKET_INVALID: ticker review {} is below the four-star gate",
+                row.id
+            );
         }
         if row.body.trim().is_empty() || row.body.chars().count() > MAX_REVIEW_BODY_CHARS {
-            bail!("PLUGIN_MARKET_INVALID: ticker review {} has a body outside the public bounds", row.id);
+            bail!(
+                "PLUGIN_MARKET_INVALID: ticker review {} has a body outside the public bounds",
+                row.id
+            );
         }
         if row.author_name.chars().count() > MAX_AUTHOR_NAME_CHARS {
             bail!("PLUGIN_MARKET_INVALID: ticker review {} has an author name outside the public bounds", row.id);
