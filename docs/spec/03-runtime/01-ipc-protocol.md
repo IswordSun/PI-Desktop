@@ -1589,7 +1589,8 @@ Desktop-only channels scan configuration written by other agent tools on the
 same machine — Claude Desktop (`claude_desktop_config.json` on macOS, Windows
 and Linux), Claude Code (`~/.claude.json` and `~/.claude/settings.json` merged),
 Cursor global and per-project `mcp.json`, Codex (`~/.codex/config.toml`
-`[mcp_servers.*]`), opencode (`~/.config/opencode/opencode.json` `mcp` map) —
+`[mcp_servers.*]`), opencode (`~/.config/opencode/opencode.json` `mcp` map),
+Pi (`~/.pi/agent/mcp.json` `mcpServers`) —
 so the user can review and batch-import into this app's MCP list. ChatGPT
 desktop is listed as a placeholder because it has no public configuration path
 yet.

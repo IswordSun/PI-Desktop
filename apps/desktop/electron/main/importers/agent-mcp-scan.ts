@@ -18,6 +18,7 @@ export type McpSourceKind =
   | "cursor-project"
   | "codex"
   | "opencode"
+  | "pi"
   | "chatgpt-desktop";
 
 export interface McpCandidate {
@@ -536,19 +537,29 @@ async function scanChatgptDesktop(): Promise<{
   };
 }
 
+async function scanPi(
+  home: string,
+): Promise<{ report: McpSourceReport; candidates: McpCandidate[] }> {
+  return scanJsonMcpServers("pi", path.join(home, ".pi", "agent", "mcp.json"), (root) =>
+    isRecord(root.mcpServers) ? root.mcpServers : null,
+  );
+}
+
 export async function scanExternalMcp(opts: McpScanOptions = {}): Promise<McpScanResult> {
   const home = opts.homeDir ?? os.homedir();
   const platform = opts.platform ?? process.platform;
   const env = opts.env ?? process.env;
 
-  const [claudeDesktop, claudeCode, cursorGlobal, opencode, codex, chatgpt] = await Promise.all([
-    scanClaudeDesktop(home, platform, env),
-    scanClaudeCode(home),
-    scanCursorGlobal(home),
-    scanOpencode(home, env),
-    scanCodex(home),
-    scanChatgptDesktop(),
-  ]);
+  const [claudeDesktop, claudeCode, cursorGlobal, opencode, codex, pi, chatgpt] =
+    await Promise.all([
+      scanClaudeDesktop(home, platform, env),
+      scanClaudeCode(home),
+      scanCursorGlobal(home),
+      scanOpencode(home, env),
+      scanCodex(home),
+      scanPi(home),
+      scanChatgptDesktop(),
+    ]);
 
   const parts: Array<{ reports: McpSourceReport[]; candidates: McpCandidate[] }> = [
     { reports: [claudeDesktop.report], candidates: claudeDesktop.candidates },
@@ -556,6 +567,7 @@ export async function scanExternalMcp(opts: McpScanOptions = {}): Promise<McpSca
     { reports: [cursorGlobal.report], candidates: cursorGlobal.candidates },
     { reports: [opencode.report], candidates: opencode.candidates },
     { reports: [codex.report], candidates: codex.candidates },
+    { reports: [pi.report], candidates: pi.candidates },
     { reports: [chatgpt.report], candidates: chatgpt.candidates },
   ];
 

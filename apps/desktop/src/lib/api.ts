@@ -262,6 +262,7 @@ export type ExternalMcpSourceKind =
   | "cursor-project"
   | "codex"
   | "opencode"
+  | "pi"
   | "chatgpt-desktop";
 
 export interface ExternalMcpCandidate {

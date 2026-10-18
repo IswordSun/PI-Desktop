@@ -1216,6 +1216,7 @@ sklm: {
     importAgentScanSourceCursorProject: "Cursor 项目",
     importAgentScanSourceCodex: "Codex",
     importAgentScanSourceOpenCode: "opencode",
+    importAgentScanSourcePi: "PI agent",
     importAgentScanSourceChatgpt: "ChatGPT 桌面版",
     importAgentScanSourcePiUser: "PI 全局（已导入）",
     importAgentScanSourcePiProject: "PI 项目（已导入）",

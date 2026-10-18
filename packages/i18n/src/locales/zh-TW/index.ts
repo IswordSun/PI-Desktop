@@ -1216,6 +1216,7 @@ sklm: {
     importAgentScanSourceCursorProject: "Cursor project",
     importAgentScanSourceCodex: "Codex",
     importAgentScanSourceOpenCode: "opencode",
+    importAgentScanSourcePi: "PI agent",
     importAgentScanSourceChatgpt: "ChatGPT desktop",
     importAgentScanSourcePiUser: "PI global (already imported)",
     importAgentScanSourcePiProject: "PI project (already imported)",

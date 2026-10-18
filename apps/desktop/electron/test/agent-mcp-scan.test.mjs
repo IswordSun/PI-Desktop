@@ -215,6 +215,74 @@ test("chatgpt-desktop always reports as not detected until a stable path exists"
   }
 });
 
+test("pi agent mcp.json is scanned from the user-level agent directory", async () => {
+  const { root, home } = await makeHome();
+  try {
+    const cfg = join(home, ".pi", "agent", "mcp.json");
+    await mkdir(dirname(cfg), { recursive: true });
+    await writeFile(
+      cfg,
+      JSON.stringify({
+        mcpServers: {
+          serena: {
+            command: "uvx",
+            args: ["--from", "git+https://github.com/oraios/serena", "serena"],
+            env: { SERENA_HOME: "/tmp/serena" },
+            description: "Code intelligence",
+          },
+          docs: {
+            url: "https://mcp.example.com/mcp",
+            headers: { Authorization: "Bearer literal" },
+          },
+          paused: { command: "node", enabled: false },
+        },
+      }),
+    );
+
+    const result = await scanExternalMcp({ homeDir: home, platform: "linux", env: {} });
+    const found = result.candidates.filter((candidate) => candidate.source === "pi");
+    assert.equal(found.length, 3);
+
+    const serena = found.find((candidate) => candidate.id === "serena");
+    assert.equal(serena.transport, "stdio");
+    assert.equal(serena.command, "uvx");
+    assert.deepEqual(serena.args, ["--from", "git+https://github.com/oraios/serena", "serena"]);
+    assert.deepEqual(serena.env, { SERENA_HOME: "/tmp/serena" });
+    assert.equal(serena.description, "Code intelligence");
+
+    const docs = found.find((candidate) => candidate.id === "docs");
+    assert.equal(docs.transport, "http");
+    assert.equal(docs.url, "https://mcp.example.com/mcp");
+    assert.deepEqual(docs.headers, { Authorization: "Bearer literal" });
+
+    const paused = found.find((candidate) => candidate.id === "paused");
+    assert.equal(paused.disabled, true);
+
+    const source = result.sources.find((item) => item.kind === "pi");
+    assert.equal(source.exists, true);
+    assert.equal(source.count, 3);
+    assert.ok(source.path.endsWith("home/.pi/agent/mcp.json"));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("a broken pi agent mcp.json surfaces on its source row", async () => {
+  const { root, home } = await makeHome();
+  try {
+    const cfg = join(home, ".pi", "agent", "mcp.json");
+    await mkdir(dirname(cfg), { recursive: true });
+    await writeFile(cfg, "{ not json");
+    const result = await scanExternalMcp({ homeDir: home, platform: "linux", env: {} });
+    const source = result.sources.find((item) => item.kind === "pi");
+    assert.equal(source.exists, true);
+    assert.match(source.error, /invalid json/);
+    assert.equal(result.candidates.filter((candidate) => candidate.source === "pi").length, 0);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("parseCodexMcpToml ignores unrelated sections and comments", () => {
   const parsed = parseCodexMcpToml(
     [

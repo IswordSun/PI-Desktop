@@ -28,6 +28,7 @@ const MCP_SOURCE_KEY: Record<ExternalMcpSourceKind, string> = {
   "cursor-project": "settings.importAgentScanSourceCursorProject",
   codex: "settings.importAgentScanSourceCodex",
   opencode: "settings.importAgentScanSourceOpenCode",
+  pi: "settings.importAgentScanSourcePi",
   "chatgpt-desktop": "settings.importAgentScanSourceChatgpt",
 };
 

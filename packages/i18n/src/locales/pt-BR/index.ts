@@ -1045,6 +1045,7 @@ export const ptBR = {
     importAgentScanSourceCursorProject: "Projeto Cursor",
     importAgentScanSourceCodex: "Codex",
     importAgentScanSourceOpenCode: "opencode",
+    importAgentScanSourcePi: "PI agent",
     importAgentScanSourceChatgpt: "ChatGPT desktop",
     importAgentScanSourcePiUser: "PI global (já importado)",
     importAgentScanSourcePiProject: "Projeto PI (já importado)",
