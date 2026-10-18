@@ -104,4 +104,3 @@ Pi group. The explicit scan now reads `auth.json` API keys and pairs them with
 the catalog Pi already cached in `models-store.json`. OAuth/subscription grants
 still stay in Pi, `!command` values are never executed or stored, and a
 `models.json` provider remains authoritative when both files describe it.
-
